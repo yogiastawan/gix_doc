@@ -9,9 +9,9 @@ fn main() {
 
     let mut gix_doc = GixDoc::new("test");
 
-    let fun = Function::new("function_1", vec![], None, "", None);
-    let fun1 = Function::new("function_2", vec![], Some("int"), "", None);
-    let fun2 = Function::new("function_3", vec![], None, "", None);
+    let fun = Function::new("function_1", vec![], None, None, "", None);
+    let fun1 = Function::new("function_2", vec![], None, Some("int"), "", None);
+    let fun2 = Function::new("function_3", vec![], None, None, "", None);
     gix_doc.add_function(fun);
     gix_doc.add_function(fun1);
     gix_doc.add_function(fun2);
