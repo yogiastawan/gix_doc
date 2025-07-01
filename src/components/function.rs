@@ -156,14 +156,14 @@ impl MarkDownImpl for Function {
                 .collect::<Vec<String>>()
                 .join("\n")
         };
-        let return_desc = match &self.return_desc {
-            Some(x) => x.to_string(),
-            None => "No return value".to_string(),
-        };
-        let note = match &self.note {
-            Some(x) => format!("> {}", x),
-            None => "".to_string(),
-        };
+        let return_desc = self
+            .return_desc
+            .as_ref()
+            .map_or("None".to_string(), |x| x.to_string());
+        let note = self
+            .note
+            .as_ref()
+            .map_or(String::new(), |n| format!("\n> {}", n));
         let fun = &self.func_declare;
 
         let out_render = format!(
@@ -175,8 +175,7 @@ impl MarkDownImpl for Function {
 ### Parameters:
 {params}
 ### Return:
-{return_desc}
-{note}"
+{return_desc}{note}"
         );
 
         out_render
@@ -190,6 +189,8 @@ fn multi_line_handle(src: &str, state: &mut FunctionState) {
     match state {
         FunctionState::Brief(_x) => *state = FunctionState::Brief(out),
         FunctionState::Param(n, _d) => *state = FunctionState::Param(n.to_string(), out),
+        FunctionState::ReturnDesc(_d) => *state = FunctionState::ReturnDesc(out),
+        FunctionState::Note(_) => *state = FunctionState::Note(out),
         _ => *state = FunctionState::Unknown,
     }
 }
