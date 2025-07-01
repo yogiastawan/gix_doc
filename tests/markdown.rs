@@ -1,4 +1,4 @@
-use gix_doc::components::function::Function;
+use gix_doc::{components::function::Function, outputs::markdown::MarkDownImpl};
 
 const CODE_SRC: &str = r"
 // another comment
@@ -48,13 +48,15 @@ const FUNCTION_SRC: &str = r"
 fn markdown_parse_function() {
     let md_function = Function::parse(FUNCTION_SRC).unwrap();
 
+    println!("{}", &md_function.render());
+
     assert_eq!(md_function.name, "add_two_number");
     assert_eq!(
         md_function.brief,
         "This is test function brief that contains description of the function. This is can be multi line."
     );
     assert_eq!(md_function.params.len(), 2);
-    assert_eq!(md_function.params[1].var_type, Some("int".to_string()));
+    assert_eq!(md_function.params[1].var_type, "int".to_string());
     assert_eq!(md_function.params[1].var_name, "y");
     assert_eq!(
         md_function.params[1].brief,

@@ -1,27 +1,18 @@
-use std::{
-    collections::{HashMap, VecDeque},
-    env::current_exe,
-    error::Error,
-    str::FromStr,
-    string,
-};
+use std::{collections::HashMap, str::FromStr};
 
-use crate::{
-    components::function,
-    outputs::{self, markdown::MarkDownImpl},
-};
+use crate::outputs::markdown::MarkDownImpl;
 
 #[derive(Debug)]
 pub struct Parameter {
-    pub var_type: Option<String>,
+    pub var_type: String,
     pub var_name: String,
     pub brief: String,
 }
 
 impl Parameter {
-    pub fn new(var_type: Option<&str>, var_name: &str, brief: &str) -> Self {
+    pub fn new(var_type: &str, var_name: &str, brief: &str) -> Self {
         Self {
-            var_type: var_type.map(|s| s.to_string()),
+            var_type: var_type.to_string(),
             var_name: var_name.to_string(),
             brief: brief.to_string(),
         }
@@ -30,7 +21,8 @@ impl Parameter {
 
 impl MarkDownImpl for Parameter {
     fn render(&self) -> String {
-        String::from("")
+        let output = format!("- *{} {}*: {}", self.var_type, self.var_name, self.brief);
+        output
     }
 }
 
@@ -52,39 +44,26 @@ pub struct Function {
     pub return_type: Option<String>,
     pub brief: String,
     pub note: Option<String>,
+    func_declare: String,
 }
 
 impl Function {
-    pub fn new(
-        name: &str,
-        params: Vec<Parameter>,
-        return_desc: Option<&str>,
-        return_type: Option<&str>,
-        brief: &str,
-        note: Option<&str>,
-    ) -> Self {
-        Self {
-            name: name.to_string(),
-            params: params,
-            return_desc: return_desc.map(|s| s.to_string()),
-            return_type: return_type.map(|s| s.to_string()),
-            brief: brief.to_string(),
-            note: note.map(|v| v.to_string()),
-        }
-    }
-
     pub fn parse(string: &str) -> Result<Self, String> {
         let mut current_state = FunctionState::Unknown;
         let lines = string.lines();
 
-        let mut params: HashMap<String, Parameter> = HashMap::new();
+        if string.is_empty() {
+            return Err("String to parse is empty".to_string());
+        }
+
+        let mut params: HashMap<String, String> = HashMap::new();
         let mut return_desc: Option<String> = None;
         let mut brief = String::new();
         let mut note: Option<String> = None;
         let mut func_declare = String::new();
 
         for line in lines {
-            println!("||{}", line);
+            // println!("||{}", line);
 
             let line = line.trim_start();
 
@@ -112,8 +91,7 @@ impl Function {
                 current_state = FunctionState::Note(note);
             } else if "* @param" == &line[..8] {
                 let (name_param, desc) = parse_param(line)?;
-                let param = Parameter::new(None, &name_param, &String::new());
-                params.insert(name_param.clone(), param);
+                params.insert(name_param.clone(), String::new());
                 current_state = FunctionState::Param(name_param, desc);
             } else if "* @brief" == &line[..8] {
                 let brief = parse_brief(line)?;
@@ -136,7 +114,7 @@ impl Function {
                         .get_mut(name.as_str())
                         .ok_or(format!("Parameter with name {} not found in hasmap", &name))?;
                     // println!("push param brief: {}", &desc);
-                    param.brief.push_str(&desc);
+                    param.push_str(&desc);
                 }
                 FunctionState::ReturnDesc(ref r) => {
                     return_desc.as_mut().map(|s| s.push_str(&r));
@@ -151,17 +129,17 @@ impl Function {
             }
         }
 
-        println!(">>{}", &brief);
-        for p in params.values() {
-            println!(">>{:?}", p);
-        }
-        println!(">>{:?}", return_desc);
-        println!(">>{:?}", note);
-        println!(">>{}", func_declare);
-
+        // println!(">>{}", &brief);
+        // for p in params.values() {
+        //     println!(">>{:?}", p);
+        // }
+        // println!(">>{:?}", return_desc);
+        // println!(">>{:?}", note);
+        // println!(">>{}", func_declare);
+        //
         let (fun, name, return_type, parameters) = parse_function_decl(&func_declare, &params)?;
 
-        println!("Func: {}", fun);
+        // println!("Func: {}", fun);
         Ok(Self {
             name,
             params: parameters,
@@ -169,13 +147,48 @@ impl Function {
             return_type: return_type,
             brief: brief,
             note: note,
+            func_declare: fun,
         })
     }
 }
 
 impl MarkDownImpl for Function {
     fn render(&self) -> String {
-        String::from_str("Function").unwrap()
+        let name = &self.name;
+        let brief = &self.brief;
+        let params = if self.params.is_empty() {
+            "No parameter (void)".to_string()
+        } else {
+            self.params
+                .iter()
+                .map(|p| p.render())
+                .collect::<Vec<String>>()
+                .join("\n")
+        };
+        let return_desc = match &self.return_desc {
+            Some(x) => x.to_string(),
+            None => "No return value".to_string(),
+        };
+        let note = match &self.note {
+            Some(x) => format!("> {}", x),
+            None => "".to_string(),
+        };
+        let fun = &self.func_declare;
+
+        let out_render = format!(
+            r"## {name}
+```c
+{fun}
+```
+{brief}
+### Parameters:
+{params}
+### Return:
+{return_desc}
+{note}"
+        );
+
+        out_render
     }
 }
 
@@ -237,7 +250,7 @@ fn parse_note(src: &str) -> Result<String, String> {
 fn function_saniter(src: &str) -> Result<String, String> {
     let src = src.trim_end();
 
-    println!("rc: {}", src);
+    // println!("rc: {}", src);
 
     if src.len() < 1 {
         return Err("Declaration not found".to_string());
@@ -251,18 +264,18 @@ fn function_saniter(src: &str) -> Result<String, String> {
     } else {
         src.to_string()
     };
-    println!("src:{}", &src);
+    // println!("src:{}", &src);
     let mut func = String::new();
     let src_com = src.split("/*").collect::<Vec<&str>>();
     if src_com.len() <= 1 {
         return Ok(src.to_string());
     }
 
-    println!("==>COM::{:?}", &src_com);
+    // println!("==>COM::{:?}", &src_com);
 
     for f in src_com {
         let s = f.split("*/").collect::<Vec<&str>>();
-        println!("==>{:?}", &s);
+        // println!("==>{:?}", &s);
         let f = if s.len() <= 1 { f } else { s[1] };
         func.push_str(f.trim_end().trim_start());
         func.push_str(" ");
@@ -275,7 +288,7 @@ fn function_saniter(src: &str) -> Result<String, String> {
 
 fn parse_function_decl(
     src: &str,
-    params: &HashMap<String, Parameter>,
+    params: &HashMap<String, String>,
 ) -> Result<(String, String, Option<String>, Vec<Parameter>), String> {
     // int function_name(int var_name, char var_name);
     let src = src.trim_end().trim_start();
@@ -316,11 +329,11 @@ fn parse_function_decl(
         let param_desc = params
             .get(&param_name.to_string())
             .ok_or(format!("Parameter name {} is not documented", &param_name))?;
-        let param_desc = param_desc.brief.clone();
+        let param_desc = param_desc;
 
         param_variable.push(format!("{} {}", param_type, param_name));
 
-        parameters.push(Parameter::new(Some(param_type), param_name, &param_desc));
+        parameters.push(Parameter::new(param_type, param_name, &param_desc));
     }
 
     let (return_type, ret) = match return_type.as_deref() {
