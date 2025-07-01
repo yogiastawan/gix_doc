@@ -1,4 +1,4 @@
-use std::{collections::HashMap, str::FromStr};
+use std::collections::HashMap;
 
 use crate::outputs::markdown::MarkDownImpl;
 
@@ -129,17 +129,8 @@ impl Function {
             }
         }
 
-        // println!(">>{}", &brief);
-        // for p in params.values() {
-        //     println!(">>{:?}", p);
-        // }
-        // println!(">>{:?}", return_desc);
-        // println!(">>{:?}", note);
-        // println!(">>{}", func_declare);
-        //
         let (fun, name, return_type, parameters) = parse_function_decl(&func_declare, &params)?;
 
-        // println!("Func: {}", fun);
         Ok(Self {
             name,
             params: parameters,
@@ -264,18 +255,14 @@ fn function_saniter(src: &str) -> Result<String, String> {
     } else {
         src.to_string()
     };
-    // println!("src:{}", &src);
     let mut func = String::new();
     let src_com = src.split("/*").collect::<Vec<&str>>();
     if src_com.len() <= 1 {
         return Ok(src.to_string());
     }
 
-    // println!("==>COM::{:?}", &src_com);
-
     for f in src_com {
         let s = f.split("*/").collect::<Vec<&str>>();
-        // println!("==>{:?}", &s);
         let f = if s.len() <= 1 { f } else { s[1] };
         func.push_str(f.trim_end().trim_start());
         func.push_str(" ");
@@ -322,18 +309,25 @@ fn parse_function_decl(
 
     let mut param_variable: Vec<String> = Vec::with_capacity(part2.len());
 
-    for p in part2 {
-        let prm = p.split(' ').collect::<Vec<&str>>();
-        let param_type = &prm[..prm.len() - 1].join(" ");
-        let param_name = prm.last().ok_or("Cannot get parameter name".to_string())?;
-        let param_desc = params
-            .get(&param_name.to_string())
-            .ok_or(format!("Parameter name {} is not documented", &param_name))?;
-        let param_desc = param_desc;
+    if part2.len() == 1
+        && (part2[0].trim_end().trim_start() == "void"
+            || part2[0].trim_end().trim_start().is_empty())
+    {
+        parameters = vec![];
+    } else {
+        for p in part2 {
+            let prm = p.trim_start().trim_end().split(' ').collect::<Vec<&str>>();
+            let param_type = &prm[..prm.len() - 1].join(" ");
+            let param_name = prm.last().ok_or("Cannot get parameter name".to_string())?;
+            let param_desc = params
+                .get(&param_name.to_string())
+                .ok_or(format!("Parameter name {} is not documented", &param_name))?;
+            let param_desc = param_desc;
 
-        param_variable.push(format!("{} {}", param_type, param_name));
+            param_variable.push(format!("{} {}", param_type, param_name));
 
-        parameters.push(Parameter::new(param_type, param_name, &param_desc));
+            parameters.push(Parameter::new(param_type, param_name, &param_desc));
+        }
     }
 
     let (return_type, ret) = match return_type.as_deref() {

@@ -35,6 +35,7 @@ const FUNCTION_SRC: &str = r"
  * @param y This is second parameter of function and this is in multiline mode,
  * because it's so long.
  * n
+ * @param my_struct My Custom struct
  *
  * @return This is return description of the function.
  *
@@ -42,7 +43,18 @@ const FUNCTION_SRC: &str = r"
  * contains long text.
  */
 /*jggkkg*/ int /*hhuhfikgi*/ add_two_number/*commounn*/(int /*comm*/ x, //comment1
-                   int /*commenn*/ y /*comment2*/);";
+                   int /*commenn*/ y /*comment2*/,
+                   struct MyStruct my_struct);";
+
+const FUNCTION_SRC2: &str = r"
+/**
+ * @brief This is test function brief that contains description of the function.
+ * This is can be multi line.
+ *
+ * @note This is note of the function. It can be multiline because usualy this
+ * contains long text.
+ */
+void say_hello(void/*void param*/);";
 
 #[test]
 fn markdown_parse_function() {
@@ -55,7 +67,7 @@ fn markdown_parse_function() {
         md_function.brief,
         "This is test function brief that contains description of the function. This is can be multi line."
     );
-    assert_eq!(md_function.params.len(), 2);
+    assert_eq!(md_function.params.len(), 3);
     assert_eq!(md_function.params[1].var_type, "int".to_string());
     assert_eq!(md_function.params[1].var_name, "y");
     assert_eq!(
@@ -63,4 +75,8 @@ fn markdown_parse_function() {
         "This is second parameter of function and this is in multiline mode, because it's so long. n"
     );
     assert_eq!(md_function.return_type, Some("int".to_string()));
+
+    let md_fun2 = Function::parse(FUNCTION_SRC2).unwrap();
+
+    println!("{}", md_fun2.render());
 }
