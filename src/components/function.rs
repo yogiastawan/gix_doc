@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::fmt::Write;
 
 use crate::outputs::markdown::MarkDownImpl;
 
@@ -150,11 +151,15 @@ impl MarkDownImpl for Function {
         let params = if self.params.is_empty() {
             "No parameter (void)".to_string()
         } else {
-            self.params
-                .iter()
-                .map(|p| p.render())
-                .collect::<Vec<String>>()
-                .join("\n")
+            let mut res = String::new();
+            for (i, p) in self.params.iter().enumerate() {
+                if i > 0 {
+                    res.push('\n');
+                }
+
+                let _ = write!(res, "{}", p.render());
+            }
+            res
         };
         let return_desc = self
             .return_desc
