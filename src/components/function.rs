@@ -22,7 +22,7 @@ impl Parameter {
 
 impl MarkDownImpl for Parameter {
     fn render(&self) -> String {
-        let output = format!("- *{} {}*: {}", self.var_type, self.var_name, self.brief);
+        let output = format!("*{} {}*: {}", self.var_type, self.var_name, self.brief);
         output
     }
 }
@@ -72,11 +72,11 @@ impl Function {
                 continue;
             }
 
-            if "/**" == &line[..] {
+            if "/**" == line {
                 continue;
             }
 
-            if &line[..] == "*/" {
+            if line == "*/" {
                 continue;
             }
 
@@ -157,7 +157,7 @@ impl MarkDownImpl for Function {
                     res.push('\n');
                 }
 
-                let _ = write!(res, "{}", p.render());
+                let _ = write!(res, "- {}", p.render());
             }
             res
         };
@@ -270,7 +270,7 @@ fn function_saniter(src: &str) -> Result<String, String> {
     for f in src_com {
         let s = f.split("*/").collect::<Vec<&str>>();
         let f = if s.len() <= 1 { f } else { s[1] };
-        func.push_str(f.trim_end().trim_start());
+        func.push_str(f.trim());
         func.push_str(" ");
     }
 
@@ -308,21 +308,18 @@ fn parse_function_decl(
     let return_type = Some(part1[..part1.len() - 1].join(" "));
 
     //get parameters
-    let part2 = &src[l_index + 1..r_index].trim_end().trim_start();
+    let part2 = &src[l_index + 1..r_index].trim();
     let part2 = part2.split(',').collect::<Vec<&str>>();
 
     let mut parameters: Vec<Parameter> = Vec::with_capacity(part2.len());
 
     let mut param_variable: Vec<String> = Vec::with_capacity(part2.len());
 
-    if part2.len() == 1
-        && (part2[0].trim_end().trim_start() == "void"
-            || part2[0].trim_end().trim_start().is_empty())
-    {
+    if part2.len() == 1 && (part2[0].trim() == "void" || part2[0].trim().is_empty()) {
         parameters = vec![];
     } else {
         for p in part2 {
-            let prm = p.trim_start().trim_end().split(' ').collect::<Vec<&str>>();
+            let prm = p.trim().split(' ').collect::<Vec<&str>>();
             let param_type = &prm[..prm.len() - 1].join(" ");
             let param_name = prm.last().ok_or("Cannot get parameter name".to_string())?;
             let param_desc = params
